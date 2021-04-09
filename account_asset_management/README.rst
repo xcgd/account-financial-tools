@@ -74,6 +74,7 @@ Changelog
 * The configuration option was removed so the only function of that is to
   allow the module to be uninstalled by unchecking that configuration option.
 * Tests were adapted.
+* Asset fields are hidden in the lines of invoice form views.
 
 12.0.2.1.0 (2019-10-21)
 ~~~~~~~~~~~~~~~~~~~~~~~
