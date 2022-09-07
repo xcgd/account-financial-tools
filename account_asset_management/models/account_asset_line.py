@@ -9,10 +9,15 @@ class AccountAssetLine(models.Model):
     _name = "account.asset.line"
     _description = "Asset depreciation table line"
     _order = "type, line_date"
+    _check_company_auto = True
 
     name = fields.Char(string="Depreciation Name", size=64, readonly=True)
     asset_id = fields.Many2one(
-        comodel_name="account.asset", string="Asset", required=True, ondelete="cascade"
+        comodel_name="account.asset",
+        string="Asset",
+        required=True,
+        ondelete="cascade",
+        check_company=True,
     )
     previous_id = fields.Many2one(
         comodel_name="account.asset.line",
@@ -41,7 +46,10 @@ class AccountAssetLine(models.Model):
     line_date = fields.Date(string="Date", required=True)
     line_days = fields.Integer(string="Days", readonly=True)
     move_id = fields.Many2one(
-        comodel_name="account.move", string="Depreciation Entry", readonly=True
+        comodel_name="account.move",
+        string="Depreciation Entry",
+        readonly=True,
+        check_company=True,
     )
     move_check = fields.Boolean(
         compute="_compute_move_check", string="Posted", store=True
@@ -59,6 +67,9 @@ class AccountAssetLine(models.Model):
         string="Initial Balance Entry",
         help="Set this flag for entries of previous fiscal years "
         "for which Odoo has not generated accounting entries.",
+    )
+    company_id = fields.Many2one(
+        "res.company", store=True, readonly=True, related="asset_id.company_id",
     )
 
     @api.depends("amount", "previous_id", "type")
@@ -211,9 +222,11 @@ class AccountAssetLine(models.Model):
         return move_data
 
     def _setup_move_line_data(self, depreciation_date, account, ml_type, move):
+        """Prepare data to be propagated to account.move.line"""
         asset = self.asset_id
         amount = self.amount
         analytic_id = False
+        analytic_tags = self.env["account.analytic.tag"]
         if ml_type == "depreciation":
             debit = amount < 0 and -amount or 0.0
             credit = amount > 0 and amount or 0.0
@@ -221,6 +234,7 @@ class AccountAssetLine(models.Model):
             debit = amount > 0 and amount or 0.0
             credit = amount < 0 and -amount or 0.0
             analytic_id = asset.account_analytic_id.id
+            analytic_tags = asset.analytic_tag_ids
         move_line_data = {
             "name": asset.name,
             "ref": self.name,
@@ -231,6 +245,7 @@ class AccountAssetLine(models.Model):
             "journal_id": asset.profile_id.journal_id.id,
             "partner_id": asset.partner_id.id,
             "analytic_account_id": analytic_id,
+            "analytic_tag_ids": [(4, tag.id) for tag in analytic_tags],
             "date": depreciation_date,
             "asset_id": asset.id,
         }
@@ -277,16 +292,38 @@ class AccountAssetLine(models.Model):
             "domain": [("id", "=", self.move_id.id)],
         }
 
+    def update_asset_line_after_unlink_move(self):
+        self.write({"move_id": False})
+        if self.parent_state == "close":
+            self.asset_id.write({"state": "open"})
+        elif self.parent_state == "removed" and self.type == "remove":
+            self.asset_id.write({"state": "close", "date_remove": False})
+            self.unlink()
+
     def unlink_move(self):
         for line in self:
-            move = line.move_id
-            move.button_draft()
-            move.with_context(force_delete=True, unlink_from_asset=True).unlink()
-            # trigger store function
-            line.with_context(unlink_from_asset=True).write({"move_id": False})
-            if line.parent_state == "close":
-                line.asset_id.write({"state": "open"})
-            elif line.parent_state == "removed" and line.type == "remove":
-                line.asset_id.write({"state": "close", "date_remove": False})
-                line.unlink()
+            if line.asset_id.profile_id.allow_reversal:
+                context = dict(self._context or {})
+                context.update(
+                    {
+                        "active_model": self._name,
+                        "active_ids": line.ids,
+                        "active_id": line.id,
+                    }
+                )
+                return {
+                    "name": _("Reverse Move"),
+                    "view_mode": "form",
+                    "res_model": "wiz.asset.move.reverse",
+                    "target": "new",
+                    "type": "ir.actions.act_window",
+                    "context": context,
+                }
+            else:
+                move = line.move_id
+                move.button_draft()
+                move.with_context(force_delete=True, unlink_from_asset=True).unlink()
+                line.with_context(
+                    unlink_from_asset=True
+                ).update_asset_line_after_unlink_move()
         return True

@@ -5,6 +5,7 @@ import logging
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
+from odoo.tests.common import Form
 
 _logger = logging.getLogger(__name__)
 
@@ -26,6 +27,17 @@ FIELDS_AFFECTS_ASSET_MOVE_LINE = {
 
 class AccountMove(models.Model):
     _inherit = "account.move"
+
+    asset_count = fields.Integer(compute="_compute_asset_count")
+
+    def _compute_asset_count(self):
+        for rec in self:
+            assets = (
+                self.env["account.asset.line"]
+                .search([("move_id", "=", rec.id)])
+                .mapped("asset_id")
+            )
+            rec.asset_count = len(assets)
 
     def unlink(self):
         # for move in self:
@@ -63,23 +75,35 @@ class AccountMove(models.Model):
         for move in self:
             for aml in move.line_ids.filtered("asset_profile_id"):
                 depreciation_base = aml.debit or -aml.credit
+                if not aml.name:
+                    raise UserError(
+                        _("Asset name must be set in the label of the line.")
+                    )
+                if aml.asset_id:
+                    continue
                 vals = {
                     "name": aml.name,
                     "code": move.name,
-                    "profile_id": aml.asset_profile_id.id,
+                    "profile_id": aml.asset_profile_id,
                     "purchase_value": depreciation_base,
-                    "partner_id": aml.partner_id.id,
+                    "partner_id": aml.partner_id,
                     "date_start": move.date,
-                    "account_analytic_id": aml.analytic_account_id.id,
+                    "account_analytic_id": aml.analytic_account_id,
                 }
-                if self.env.context.get("company_id"):
-                    vals["company_id"] = self.env.context["company_id"]
-                asset = (
-                    self.env["account.asset"]
-                    .with_context(create_asset_from_move_line=True, move_id=move.id)
-                    .create(vals)
+                asset_form = Form(
+                    self.env["account.asset"].with_context(
+                        create_asset_from_move_line=True,
+                        force_company=move.company_id.id,
+                        move_id=move.id,
+                    )
                 )
-                aml.with_context(allow_asset=True).asset_id = asset.id
+                for key, val in vals.items():
+                    setattr(asset_form, key, val)
+                asset = asset_form.save()
+                asset.analytic_tag_ids = aml.analytic_tag_ids
+                aml.with_context(
+                    allow_asset=True, allow_asset_removal=True
+                ).asset_id = asset.id
             refs = [
                 "<a href=# data-oe-model=account.asset data-oe-id=%s>%s</a>"
                 % tuple(name_get)
@@ -103,25 +127,67 @@ class AccountMove(models.Model):
             for line_command in move_vals.get("line_ids", []):
                 line_vals = line_command[2]  # (0, 0, {...})
                 asset = self.env["account.asset"].browse(line_vals["asset_id"])
-                asset.unlink()
-                line_vals.update(asset_profile_id=False, asset_id=False)
+                # We remove the asset if we recognize that we are reversing
+                # the asset creation
+                if asset:
+                    asset_line = self.env["account.asset.line"].search(
+                        [("asset_id", "=", asset.id), ("type", "=", "create")], limit=1
+                    )
+                    if asset_line and asset_line.move_id == self:
+                        asset.unlink()
+                        line_vals.update(asset_profile_id=False, asset_id=False)
         return move_vals
+
+    def action_view_assets(self):
+        assets = (
+            self.env["account.asset.line"]
+            .search([("move_id", "=", self.id)])
+            .mapped("asset_id")
+        )
+        action = self.env.ref("account_asset_management.account_asset_action")
+        action_dict = action.read()[0]
+        if len(assets) == 1:
+            res = self.env.ref(
+                "account_asset_management.account_asset_view_form", False
+            )
+            action_dict["views"] = [(res and res.id or False, "form")]
+            action_dict["res_id"] = assets.id
+        elif assets:
+            action_dict["domain"] = [("id", "in", assets.ids)]
+        else:
+            action_dict = {"type": "ir.actions.act_window_close"}
+        return action_dict
 
 
 class AccountMoveLine(models.Model):
     _inherit = "account.move.line"
 
     asset_profile_id = fields.Many2one(
-        comodel_name="account.asset.profile", string="Asset Profile"
+        comodel_name="account.asset.profile",
+        string="Asset Profile",
+        compute="_compute_asset_profile",
+        store=True,
+        readonly=False,
+        copy=True,
     )
     asset_id = fields.Many2one(
-        comodel_name="account.asset", string="Asset", ondelete="restrict"
+        comodel_name="account.asset", string="Asset", ondelete="restrict",
     )
 
-    @api.onchange("account_id")
-    def _onchange_account_id(self):
-        self.asset_profile_id = self.account_id.asset_profile_id
-        super()._onchange_account_id()
+    @api.depends("account_id", "asset_id")
+    def _compute_asset_profile(self):
+        for rec in self:
+            if rec.account_id.asset_profile_id and not rec.asset_id:
+                rec.asset_profile_id = rec.account_id.asset_profile_id
+            elif rec.asset_id:
+                rec.asset_profile_id = rec.asset_id.profile_id
+            else:  # don't touch it - Needed for avoiding CacheMiss exceptions
+                rec.asset_profile_id = rec.asset_profile_id
+
+    @api.onchange("asset_profile_id")
+    def _onchange_asset_profile_id(self):
+        if self.asset_profile_id.account_asset_id:
+            self.account_id = self.asset_profile_id.account_asset_id
 
     @api.model_create_multi
     def create(self, vals_list):

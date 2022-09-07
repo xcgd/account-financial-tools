@@ -7,6 +7,7 @@ from odoo.exceptions import UserError
 
 class AccountAssetProfile(models.Model):
     _name = "account.asset.profile"
+    _check_company_auto = True
     _description = "Asset profile"
     _order = "name"
 
@@ -15,43 +16,53 @@ class AccountAssetProfile(models.Model):
     account_analytic_id = fields.Many2one(
         comodel_name="account.analytic.account", string="Analytic account"
     )
+    analytic_tag_ids = fields.Many2many(
+        comodel_name="account.analytic.tag", string="Analytic tags"
+    )
     account_asset_id = fields.Many2one(
         comodel_name="account.account",
-        domain=[("deprecated", "=", False)],
+        domain="[('deprecated', '=', False), ('company_id', '=', company_id)]",
         string="Asset Account",
+        check_company=True,
         required=True,
     )
     account_depreciation_id = fields.Many2one(
         comodel_name="account.account",
-        domain=[("deprecated", "=", False)],
+        domain="[('deprecated', '=', False), ('company_id', '=', company_id)]",
         string="Depreciation Account",
+        check_company=True,
         required=True,
     )
     account_expense_depreciation_id = fields.Many2one(
         comodel_name="account.account",
-        domain=[("deprecated", "=", False)],
+        domain="[('deprecated', '=', False), ('company_id', '=', company_id)]",
         string="Depr. Expense Account",
+        check_company=True,
         required=True,
     )
     account_plus_value_id = fields.Many2one(
         comodel_name="account.account",
-        domain=[("deprecated", "=", False)],
+        domain="[('deprecated', '=', False), ('company_id', '=', company_id)]",
+        check_company=True,
         string="Plus-Value Account",
     )
     account_min_value_id = fields.Many2one(
         comodel_name="account.account",
-        domain=[("deprecated", "=", False)],
+        domain="[('deprecated', '=', False), ('company_id', '=', company_id)]",
+        check_company=True,
         string="Min-Value Account",
     )
     account_residual_value_id = fields.Many2one(
         comodel_name="account.account",
-        domain=[("deprecated", "=", False)],
+        domain="[('deprecated', '=', False), ('company_id', '=', company_id)]",
+        check_company=True,
         string="Residual Value Account",
     )
     journal_id = fields.Many2one(
         comodel_name="account.journal",
-        domain=[("type", "=", "general")],
+        domain="[('type', '=', 'general'), ('company_id', '=', company_id)]",
         string="Journal",
+        check_company=True,
         required=True,
     )
     company_id = fields.Many2one(
@@ -65,6 +76,7 @@ class AccountAssetProfile(models.Model):
         relation="account_asset_profile_group_rel",
         column1="profile_id",
         column2="group_id",
+        check_company=True,
         string="Asset Groups",
     )
     method = fields.Selection(
@@ -107,7 +119,9 @@ class AccountAssetProfile(models.Model):
         help="Choose the method to use to compute the dates and "
         "number of depreciation lines.\n"
         "  * Number of Years: Specify the number of years "
-        "for the depreciation.\n",
+        "for the depreciation.\n"
+        "  * Number of Depreciations: Fix the number of "
+        "depreciation lines and the time between 2 depreciations.\n",
     )
     days_calc = fields.Boolean(
         string="Calculate by days",
@@ -149,6 +163,12 @@ class AccountAssetProfile(models.Model):
         "product item. So, there will be an asset by product item.",
     )
     active = fields.Boolean(default=True)
+    allow_reversal = fields.Boolean(
+        "Allow Reversal of journal entries",
+        help="If set, when pressing the Delete/Reverse Move button in a "
+        "posted depreciation line will prompt the option to reverse the "
+        "journal entry, instead of deleting them.",
+    )
 
     @api.model
     def _default_company_id(self):
@@ -174,7 +194,10 @@ class AccountAssetProfile(models.Model):
         Install the 'account_asset_management_method_number_end' to enable the
         'Number' and 'End' Time Methods.
         """
-        return [("year", _("Number of Years or end date"))]
+        return [
+            ("year", _("Number of Years or end date")),
+            ("number", _("Number of Depreciations")),
+        ]
 
     @api.constrains("method", "method_time")
     def _check_method(self):

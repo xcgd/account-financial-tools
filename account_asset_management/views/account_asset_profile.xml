@@ -26,6 +26,7 @@
                             <field name="account_plus_value_id" />
                             <field name="account_min_value_id" />
                             <field name="account_residual_value_id" />
+                            <field name="allow_reversal" />
                         </group>
                         <group string="Depreciation Dates">
                             <field name="method_time" />
@@ -57,6 +58,7 @@
                             string="Analytic Information"
                         >
                             <field name="account_analytic_id" />
+                            <field name="analytic_tag_ids" widget="many2many_tags" />
                         </group>
                     </group>
                     <separator string="Notes" />

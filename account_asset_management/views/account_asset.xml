@@ -25,7 +25,7 @@
                         string="Remove"
                         type="object"
                         groups="account.group_account_manager"
-                        attrs="{'invisible':['|', ('method_time', '!=', 'year'), ('state', 'not in', ['open', 'close'])]}"
+                        attrs="{'invisible':[('state', 'not in', ['open', 'close'])]}"
                         help="Asset removal."
                     />
                     <field
@@ -114,6 +114,11 @@
                                     name="account_analytic_id"
                                     groups="analytic.group_analytic_accounting"
                                 />
+                                <field
+                                    name="analytic_tag_ids"
+                                    groups="analytic.group_analytic_accounting"
+                                    widget="many2many_tags"
+                                />
                             </group>
                             <group colspan="4">
                                 <group>
@@ -151,6 +156,7 @@
                                         name="prorata"
                                         attrs="{'readonly': [('method_time', '!=', 'year')]}"
                                     />
+                                    <field name="carry_forward_missed_depreciations" />
                                 </group>
                             </group>
                         </page>
@@ -200,7 +206,7 @@
                                     <button
                                         name="unlink_move"
                                         icon="fa-times"
-                                        string="Delete Move"
+                                        string="Delete/Reverse Move"
                                         type="object"
                                         confirm="Are you sure ?"
                                         groups="account.group_account_manager"
@@ -298,6 +304,11 @@
                         </page>
                     </notebook>
                 </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids" widget="mail_followers" />
+                    <field name="activity_ids" widget="mail_activity" />
+                    <field name="message_ids" widget="mail_thread" />
+                </div>
             </form>
         </field>
     </record>
@@ -373,6 +384,7 @@
     <record id="account_asset_action" model="ir.actions.act_window">
         <field name="name">Assets</field>
         <field name="res_model">account.asset</field>
+        <field name="view_mode">tree,form</field>
         <field name="view_id" ref="account_asset_view_tree" />
         <field name="search_view_id" ref="account_asset_view_search" />
     </record>
