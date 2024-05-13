@@ -40,7 +40,7 @@ addon | version | maintainers | summary
 [account_cash_basis_group_base_line](account_cash_basis_group_base_line/) | 13.0.0.0.1 |  | Compacting the creation of Journal Lines for CABA base lines.
 [account_chart_update](account_chart_update/) | 13.0.2.0.1 |  | Wizard to update a company's account chart from a template
 [account_check_deposit](account_check_deposit/) | 13.0.1.2.0 |  | Manage deposit of checks to the bank
-[account_document_reversal](account_document_reversal/) | 13.0.1.0.0 | [![kittiu](https://github.com/kittiu.png?size=30px)](https://github.com/kittiu) | Create reversed journal entries when cancel document
+[account_document_reversal](account_document_reversal/) | 13.0.1.0.1 | [![kittiu](https://github.com/kittiu.png?size=30px)](https://github.com/kittiu) | Create reversed journal entries when cancel document
 [account_fiscal_month](account_fiscal_month/) | 13.0.1.0.0 |  | Provide a fiscal month date range type
 [account_fiscal_position_allowed_journal](account_fiscal_position_allowed_journal/) | 13.0.1.0.0 | [![ThomasBinsfeld](https://github.com/ThomasBinsfeld.png?size=30px)](https://github.com/ThomasBinsfeld) | Allow defining allowed journals on fiscal positions. Related invoices can only use one of the allowed journals on the fiscal position.
 [account_fiscal_year](account_fiscal_year/) | 13.0.1.0.0 | [![eLBati](https://github.com/eLBati.png?size=30px)](https://github.com/eLBati) | Create a menu for Account Fiscal Year
@@ -55,7 +55,8 @@ addon | version | maintainers | summary
 [account_move_force_removal](account_move_force_removal/) | 13.0.1.0.0 |  | Allow force removal account moves
 [account_move_line_cumulated_balance](account_move_line_cumulated_balance/) | 13.0.1.0.1 |  | Show cumulated balances on the interactive journal ledgers
 [account_move_line_purchase_info](account_move_line_purchase_info/) | 13.0.1.1.3 |  | Introduces the purchase order line to the journal items
-[account_move_line_sale_info](account_move_line_sale_info/) | 13.0.1.0.3 |  | Introduces the purchase order line to the journal items
+[account_move_line_residual](account_move_line_residual/) | 13.0.1.0.0 |  | Display residual amount in move line view
+[account_move_line_sale_info](account_move_line_sale_info/) | 13.0.1.0.5 |  | Introduces the purchase order line to the journal items
 [account_move_line_tax_editable](account_move_line_tax_editable/) | 13.0.2.0.0 |  | Allows to edit taxes on non-posted account move lines
 [account_move_line_used_currency](account_move_line_used_currency/) | 13.0.1.0.0 |  | Account Move Line Amount Currency
 [account_move_print](account_move_print/) | 13.0.1.0.0 | [![JordiBForgeFlow](https://github.com/JordiBForgeFlow.png?size=30px)](https://github.com/JordiBForgeFlow) | Adds the option to print Journal Entries
@@ -65,7 +66,7 @@ addon | version | maintainers | summary
 [account_spread_cost_revenue](account_spread_cost_revenue/) | 13.0.1.0.1 | [![astirpe](https://github.com/astirpe.png?size=30px)](https://github.com/astirpe) | Spread costs and revenues over a custom period
 [account_tax_repartition_line_tax_group_account](account_tax_repartition_line_tax_group_account/) | 13.0.1.0.0 |  | Set a default account from tax group to tax repartition lines
 [base_vat_optional_vies](base_vat_optional_vies/) | 13.0.1.0.1 |  | Optional validation of VAT via VIES
-[product_category_tax](product_category_tax/) | 13.0.1.2.1 |  | Configure taxes in the product category
+[product_category_tax](product_category_tax/) | 13.0.1.2.2 |  | Configure taxes in the product category
 [stock_account_prepare_anglo_saxon_out_lines_hook](stock_account_prepare_anglo_saxon_out_lines_hook/) | 13.0.1.0.3 |  | Modify when and how anglo saxon journal items are created
 
 [//]: # (end addons)
